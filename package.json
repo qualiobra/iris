@@ -1,7 +1,7 @@
 {
-  "name": "openclaw",
-  "version": "2026.1.29",
-  "description": "WhatsApp gateway CLI (Baileys web) with Pi RPC agent",
+  "name": "iris-assistant",
+  "version": "2026.1.30",
+  "description": "Iris - Sua assistente pessoal de IA. WhatsApp, Telegram, Slack, Discord e mais.",
   "type": "module",
   "main": "dist/index.js",
   "exports": {
