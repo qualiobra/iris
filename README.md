@@ -2,7 +2,7 @@
 
 <p align="center">
     <picture>
-        <img src="drafts/2026-01-30-iris-deusa-elegante.png" alt="Iris" width="500">
+        <img src="assets/iris-header.png" alt="Iris - Sua Assistente Pessoal de IA" width="800">
     </picture>
 </p>
 
