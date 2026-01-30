@@ -94,7 +94,21 @@ export type OpenClawConfig = {
   discovery?: DiscoveryConfig;
   canvasHost?: CanvasHostConfig;
   talk?: TalkConfig;
+  smartRouter?: SmartRouterConfig;
   gateway?: GatewayConfig;
+};
+
+export type SmartRouterConfig = {
+  /** Enable smart router for owner-only routing of unprefixed messages. */
+  enabled?: boolean;
+  /** Owner phone number (E.164 format recommended). */
+  ownerPhone?: string;
+  /** Owner display name for matching. */
+  ownerName?: string;
+  /** Path to CONTATOS.md file. Defaults to workspace/CONTATOS.md. */
+  contactsPath?: string;
+  /** Enable verbose logging for debugging. */
+  verbose?: boolean;
 };
 
 export type ConfigValidationIssue = {

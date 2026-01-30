@@ -22,6 +22,7 @@ import {
   scheduleRestartSentinelWake,
   shouldWakeFromRestartSentinel,
 } from "./server-restart-sentinel.js";
+import { initSmartRouterFromConfig } from "../web/auto-reply/smart-router-integration.js";
 
 export async function startGatewaySidecars(params: {
   cfg: ReturnType<typeof loadConfig>;
@@ -38,6 +39,19 @@ export async function startGatewaySidecars(params: {
   logChannels: { info: (msg: string) => void; error: (msg: string) => void };
   logBrowser: { error: (msg: string) => void };
 }) {
+  // Initialize Smart Router (for owner-only routing of unprefixed messages)
+  try {
+    const smartRouterInitialized = initSmartRouterFromConfig({
+      cfg: params.cfg,
+      workspaceDir: params.defaultWorkspaceDir,
+    });
+    if (smartRouterInitialized) {
+      params.log.warn("Smart Router initialized - unprefixed responses will go to owner only");
+    }
+  } catch (err) {
+    params.log.warn(`Smart Router failed to initialize: ${String(err)}`);
+  }
+
   // Start OpenClaw browser control server (unless disabled via config).
   let browserControl: Awaited<ReturnType<typeof startBrowserControlServerIfEnabled>> = null;
   try {

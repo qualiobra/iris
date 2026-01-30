@@ -37,6 +37,12 @@ import { maybeSendAckReaction } from "./ack-reaction.js";
 import { formatGroupMembers } from "./group-members.js";
 import { trackBackgroundTask, updateLastRouteInBackground } from "./last-route.js";
 import { buildInboundLine } from "./message-line.js";
+import {
+  decideRouting,
+  formatIncomingMessage,
+  isSmartRouterActive,
+  routeAndSendResponse,
+} from "../smart-router-integration.js";
 
 export type GroupHistoryEntry = {
   sender: string;
@@ -334,6 +340,48 @@ export async function processMessage(params: {
         }
       },
       deliver: async (payload: ReplyPayload, info) => {
+        // Smart Router: redireciona respostas sem prefixo pro owner (não pro remetente)
+        // Isso evita vazamento de mensagens internas para terceiros
+        const shouldUseSmartRouter =
+          isSmartRouterActive() &&
+          params.msg.chatType !== "group" &&
+          info.kind === "final" &&
+          payload.text &&
+          !payload.mediaUrl &&
+          !payload.mediaUrls?.length;
+
+        if (shouldUseSmartRouter) {
+          const routingResults = await routeAndSendResponse(
+            params.msg.from,
+            payload.text!,
+            params.route.accountId,
+          );
+
+          // Se o Smart Router processou a mensagem, não usa o fluxo padrão
+          if (routingResults.length > 0) {
+            didSendReply = true;
+            for (const result of routingResults) {
+              if (result.success) {
+                whatsappOutboundLog.info(
+                  `[SmartRouter] Sent to ${result.target}`,
+                );
+              } else {
+                whatsappOutboundLog.warn(
+                  `[SmartRouter] Failed to send to ${result.target}: ${result.error}`,
+                );
+              }
+            }
+            const shouldLog = payload.text ? true : undefined;
+            params.rememberSentText(payload.text, {
+              combinedBody,
+              combinedBodySessionKey: params.route.sessionKey,
+              logVerboseMessage: shouldLog,
+            });
+            return;
+          }
+        }
+
+        // Fluxo padrão (sem Smart Router ou Smart Router não se aplica)
         await deliverWebReply({
           replyResult: payload,
           msg: params.msg,

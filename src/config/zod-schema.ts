@@ -301,6 +301,16 @@ export const OpenClawSchema = z
       })
       .strict()
       .optional(),
+    smartRouter: z
+      .object({
+        enabled: z.boolean().optional(),
+        ownerPhone: z.string().optional(),
+        ownerName: z.string().optional(),
+        contactsPath: z.string().optional(),
+        verbose: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
     gateway: z
       .object({
         port: z.number().int().positive().optional(),
