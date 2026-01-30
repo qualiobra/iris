@@ -1,10 +1,11 @@
 import { html, nothing } from "lit";
 import { ref } from "lit/directives/ref.js";
 import { repeat } from "lit/directives/repeat.js";
-import type { SessionsListResult } from "../types";
+import type { GatewaySessionRow, SessionsListResult } from "../types";
 import type { ChatAttachment, ChatQueueItem } from "../ui-types";
 import type { ChatItem, MessageGroup } from "../types/chat-types";
 import { icons } from "../icons";
+import { formatSessionTokens } from "../presenter";
 import {
   normalizeMessage,
   normalizeRoleForGrouping,
@@ -71,6 +72,22 @@ export type ChatProps = {
 };
 
 const COMPACTION_TOAST_DURATION_MS = 5000;
+
+function renderContextIndicator(session: GatewaySessionRow | undefined) {
+  if (!session) return nothing;
+  const total = session.totalTokens ?? 0;
+  const ctx = session.contextTokens ?? 0;
+  if (!ctx || !total) return nothing;
+  
+  const pct = Math.round((total / ctx) * 100);
+  const colorClass = pct >= 80 ? "context-indicator--warning" : "";
+  
+  return html`
+    <div class="context-indicator ${colorClass}" title="Context: ${formatSessionTokens(session)}">
+      📚 ${pct}%
+    </div>
+  `;
+}
 
 function adjustTextareaHeight(el: HTMLTextAreaElement) {
   el.style.height = "auto";
@@ -250,6 +267,7 @@ export function renderChat(props: ChatProps) {
         : nothing}
 
       ${renderCompactionIndicator(props.compactionStatus)}
+      ${renderContextIndicator(activeSession)}
 
       ${props.focusMode
         ? html`

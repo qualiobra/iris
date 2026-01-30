@@ -395,3 +395,32 @@
     min-width: 120px;
   }
 }
+
+/* =============================================
+   CONTEXT INDICATOR - Shows context window usage
+   ============================================= */
+
+.context-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted, #888);
+  background: var(--bg-secondary, rgba(128, 128, 128, 0.1));
+  border-radius: 12px;
+  cursor: help;
+  z-index: 10;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.context-indicator:hover {
+  opacity: 1;
+}
+
+.context-indicator--warning {
+  color: var(--warning, #f59e0b);
+  background: var(--bg-warning, rgba(245, 158, 11, 0.15));
+}

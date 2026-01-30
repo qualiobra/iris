@@ -23,7 +23,9 @@ export function formatSessionTokens(row: GatewaySessionRow) {
   if (row.totalTokens == null) return "n/a";
   const total = row.totalTokens ?? 0;
   const ctx = row.contextTokens ?? 0;
-  return ctx ? `${total} / ${ctx}` : String(total);
+  if (!ctx) return String(total);
+  const pct = Math.round((total / ctx) * 100);
+  return `${total} / ${ctx} (${pct}%)`;
 }
 
 export function formatEventPayload(payload: unknown): string {
