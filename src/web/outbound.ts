@@ -19,6 +19,7 @@ export async function sendMessageWhatsApp(
     verbose: boolean;
     mediaUrl?: string;
     gifPlayback?: boolean;
+    sendAsSticker?: boolean;
     accountId?: string;
   },
 ): Promise<{ messageId: string; toJid: string }> {
@@ -69,9 +70,10 @@ export async function sendMessageWhatsApp(
     const hasExplicitAccountId = Boolean(options.accountId?.trim());
     const accountId = hasExplicitAccountId ? resolvedAccountId : undefined;
     const sendOptions: ActiveWebSendOptions | undefined =
-      options.gifPlayback || accountId
+      options.gifPlayback || options.sendAsSticker || accountId
         ? {
             ...(options.gifPlayback ? { gifPlayback: true } : {}),
+            ...(options.sendAsSticker ? { sendAsSticker: true } : {}),
             accountId,
           }
         : undefined;

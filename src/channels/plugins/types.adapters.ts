@@ -76,6 +76,7 @@ export type ChannelOutboundContext = {
   text: string;
   mediaUrl?: string;
   gifPlayback?: boolean;
+  sendAsSticker?: boolean;
   replyToId?: string | null;
   threadId?: string | number | null;
   accountId?: string | null;

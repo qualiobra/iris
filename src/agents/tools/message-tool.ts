@@ -65,6 +65,7 @@ function buildSendSchema(options: { includeButtons: boolean; includeCards: boole
     ),
     bestEffort: Type.Optional(Type.Boolean()),
     gifPlayback: Type.Optional(Type.Boolean()),
+    sendAsSticker: Type.Optional(Type.Boolean()),
     buttons: Type.Optional(
       Type.Array(
         Type.Array(

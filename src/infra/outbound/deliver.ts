@@ -90,6 +90,7 @@ async function createChannelHandler(params: {
   threadId?: string | number | null;
   deps?: OutboundSendDeps;
   gifPlayback?: boolean;
+  sendAsSticker?: boolean;
 }): Promise<ChannelHandler> {
   const outbound = await loadChannelOutboundAdapter(params.channel);
   if (!outbound?.sendText || !outbound?.sendMedia) {
@@ -105,6 +106,7 @@ async function createChannelHandler(params: {
     threadId: params.threadId,
     deps: params.deps,
     gifPlayback: params.gifPlayback,
+    sendAsSticker: params.sendAsSticker,
   });
   if (!handler) {
     throw new Error(`Outbound not configured for channel: ${params.channel}`);
@@ -122,6 +124,7 @@ function createPluginHandler(params: {
   threadId?: string | number | null;
   deps?: OutboundSendDeps;
   gifPlayback?: boolean;
+  sendAsSticker?: boolean;
 }): ChannelHandler | null {
   const outbound = params.outbound;
   if (!outbound?.sendText || !outbound?.sendMedia) return null;
@@ -144,6 +147,7 @@ function createPluginHandler(params: {
             replyToId: params.replyToId,
             threadId: params.threadId,
             gifPlayback: params.gifPlayback,
+            sendAsSticker: params.sendAsSticker,
             deps: params.deps,
             payload,
           })
@@ -157,6 +161,7 @@ function createPluginHandler(params: {
         replyToId: params.replyToId,
         threadId: params.threadId,
         gifPlayback: params.gifPlayback,
+        sendAsSticker: params.sendAsSticker,
         deps: params.deps,
       }),
     sendMedia: async (caption, mediaUrl) =>
@@ -169,6 +174,7 @@ function createPluginHandler(params: {
         replyToId: params.replyToId,
         threadId: params.threadId,
         gifPlayback: params.gifPlayback,
+        sendAsSticker: params.sendAsSticker,
         deps: params.deps,
       }),
   };
@@ -184,6 +190,7 @@ export async function deliverOutboundPayloads(params: {
   threadId?: string | number | null;
   deps?: OutboundSendDeps;
   gifPlayback?: boolean;
+  sendAsSticker?: boolean;
   abortSignal?: AbortSignal;
   bestEffort?: boolean;
   onError?: (err: unknown, payload: NormalizedOutboundPayload) => void;
@@ -210,6 +217,7 @@ export async function deliverOutboundPayloads(params: {
     replyToId: params.replyToId,
     threadId: params.threadId,
     gifPlayback: params.gifPlayback,
+    sendAsSticker: params.sendAsSticker,
   });
   const textLimit = handler.chunker
     ? resolveTextChunkLimit(cfg, channel, accountId, {
