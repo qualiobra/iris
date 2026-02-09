@@ -140,6 +140,13 @@ export type AgentDefaultsConfig = {
   verboseDefault?: "off" | "on" | "full";
   /** Default elevated level when no /elevated directive is present. */
   elevatedDefault?: "off" | "on" | "ask" | "full";
+  /**
+   * Controls how agent replies are delivered to the originating channel:
+   * - "auto" (default): normal behavior — block streaming + final reply
+   * - "tool-only": suppress all automatic replies; only messages sent explicitly
+   *   via the `message` tool reach the channel. Plain text output is silently discarded.
+   */
+  replyMode?: "auto" | "tool-only";
   /** Default block streaming level when no override is present. */
   blockStreamingDefault?: "off" | "on";
   /**
@@ -243,7 +250,26 @@ export type AgentDefaultsConfig = {
   };
 };
 
-export type AgentCompactionMode = "default" | "safeguard";
+export type AgentCompactionMode = "default" | "safeguard" | "handover";
+
+export type AgentHandoverConfig = {
+  /** Path to contacts mapping file (phone → name). */
+  contactsFile?: string;
+  /** Path to write the handover document. */
+  outputFile?: string;
+  /** Path to the SOUL.md file for personality reference. */
+  soulFile?: string;
+  /** Owner's name (used in handover prompt). */
+  ownerName?: string;
+  /** AI assistant's name (used in handover prompt). */
+  aiName?: string;
+  /** Language for the handover document. */
+  language?: string;
+  /** Maximum lines for the handover document. */
+  maxLines?: number;
+  /** Keep vanilla summary as internal fallback alongside handover. */
+  preserveVanillaSummary?: boolean;
+};
 
 export type AgentCompactionConfig = {
   /** Compaction summarization mode. */
@@ -254,6 +280,8 @@ export type AgentCompactionConfig = {
   maxHistoryShare?: number;
   /** Pre-compaction memory flush (agentic turn). Default: enabled. */
   memoryFlush?: AgentCompactionMemoryFlushConfig;
+  /** Handover configuration (used when mode is "handover"). */
+  handover?: AgentHandoverConfig;
 };
 
 export type AgentCompactionMemoryFlushConfig = {

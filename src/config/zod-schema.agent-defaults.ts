@@ -90,7 +90,9 @@ export const AgentDefaultsSchema = z
       .optional(),
     compaction: z
       .object({
-        mode: z.union([z.literal("default"), z.literal("safeguard")]).optional(),
+        mode: z
+          .union([z.literal("default"), z.literal("safeguard"), z.literal("handover")])
+          .optional(),
         reserveTokensFloor: z.number().int().nonnegative().optional(),
         maxHistoryShare: z.number().min(0.1).max(0.9).optional(),
         memoryFlush: z
@@ -99,6 +101,19 @@ export const AgentDefaultsSchema = z
             softThresholdTokens: z.number().int().nonnegative().optional(),
             prompt: z.string().optional(),
             systemPrompt: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+        handover: z
+          .object({
+            contactsFile: z.string().optional(),
+            outputFile: z.string().optional(),
+            soulFile: z.string().optional(),
+            ownerName: z.string().optional(),
+            aiName: z.string().optional(),
+            language: z.string().optional(),
+            maxLines: z.number().int().positive().optional(),
+            preserveVanillaSummary: z.boolean().optional(),
           })
           .strict()
           .optional(),
@@ -119,6 +134,7 @@ export const AgentDefaultsSchema = z
     elevatedDefault: z
       .union([z.literal("off"), z.literal("on"), z.literal("ask"), z.literal("full")])
       .optional(),
+    replyMode: z.union([z.literal("auto"), z.literal("tool-only")]).optional(),
     blockStreamingDefault: z.union([z.literal("off"), z.literal("on")]).optional(),
     blockStreamingBreak: z.union([z.literal("text_end"), z.literal("message_end")]).optional(),
     blockStreamingChunk: BlockStreamingChunkSchema.optional(),

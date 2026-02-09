@@ -301,6 +301,10 @@ export async function dispatchReplyFromConfig(params: {
         onToolResult: shouldSendToolSummaries
           ? (payload: ReplyPayload) => {
               const run = async () => {
+                // In tool-only mode, suppress automatic tool result delivery.
+                if ((cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only") {
+                  return;
+                }
                 const ttsPayload = await maybeApplyTtsToPayload({
                   payload,
                   cfg,
@@ -320,6 +324,11 @@ export async function dispatchReplyFromConfig(params: {
           : undefined,
         onBlockReply: (payload: ReplyPayload, context) => {
           const run = async () => {
+            // In tool-only mode, suppress all automatic block replies.
+            // Only messages sent explicitly via the message tool should reach the channel.
+            if ((cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only") {
+              return;
+            }
             // Accumulate block text for TTS generation after streaming
             if (payload.text) {
               if (accumulatedBlockText.length > 0) {
@@ -350,9 +359,12 @@ export async function dispatchReplyFromConfig(params: {
 
     const replies = replyResult ? (Array.isArray(replyResult) ? replyResult : [replyResult]) : [];
 
+    // In tool-only mode, suppress all automatic final replies.
+    const isToolOnlyMode = (cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only";
+
     let queuedFinal = false;
     let routedFinalCount = 0;
-    for (const reply of replies) {
+    for (const reply of isToolOnlyMode ? [] : replies) {
       const ttsReply = await maybeApplyTtsToPayload({
         payload: reply,
         cfg,

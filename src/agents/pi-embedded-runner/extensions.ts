@@ -9,6 +9,7 @@ import { setCompactionSafeguardRuntime } from "../pi-extensions/compaction-safeg
 import { setContextPruningRuntime } from "../pi-extensions/context-pruning/runtime.js";
 import { computeEffectiveSettings } from "../pi-extensions/context-pruning/settings.js";
 import { makeToolPrunablePredicate } from "../pi-extensions/context-pruning/tools.js";
+import { setHandoverRuntime } from "../pi-extensions/iris-handover-runtime.js";
 import { ensurePiCompactionReserveTokens } from "../pi-settings.js";
 import { isCacheTtlEligibleProvider, readLastCacheTtlTimestamp } from "./cache-ttl.js";
 
@@ -67,8 +68,12 @@ function buildContextPruningExtension(params: {
   };
 }
 
-function resolveCompactionMode(cfg?: OpenClawConfig): "default" | "safeguard" {
-  return cfg?.agents?.defaults?.compaction?.mode === "safeguard" ? "safeguard" : "default";
+function resolveCompactionMode(cfg?: OpenClawConfig): "default" | "safeguard" | "handover" {
+  const mode = cfg?.agents?.defaults?.compaction?.mode;
+  if (mode === "safeguard" || mode === "handover") {
+    return mode;
+  }
+  return "default";
 }
 
 export function buildEmbeddedExtensionPaths(params: {
@@ -79,7 +84,8 @@ export function buildEmbeddedExtensionPaths(params: {
   model: Model<Api> | undefined;
 }): string[] {
   const paths: string[] = [];
-  if (resolveCompactionMode(params.cfg) === "safeguard") {
+  const compactionMode = resolveCompactionMode(params.cfg);
+  if (compactionMode === "safeguard" || compactionMode === "handover") {
     const compactionCfg = params.cfg?.agents?.defaults?.compaction;
     const contextWindowInfo = resolveContextWindowInfo({
       cfg: params.cfg,
@@ -88,11 +94,27 @@ export function buildEmbeddedExtensionPaths(params: {
       modelContextWindow: params.model?.contextWindow,
       defaultTokens: DEFAULT_CONTEXT_TOKENS,
     });
-    setCompactionSafeguardRuntime(params.sessionManager, {
-      maxHistoryShare: compactionCfg?.maxHistoryShare,
-      contextWindowTokens: contextWindowInfo.tokens,
-    });
-    paths.push(resolvePiExtensionPath("compaction-safeguard"));
+
+    if (compactionMode === "safeguard") {
+      setCompactionSafeguardRuntime(params.sessionManager, {
+        maxHistoryShare: compactionCfg?.maxHistoryShare,
+        contextWindowTokens: contextWindowInfo.tokens,
+      });
+      paths.push(resolvePiExtensionPath("compaction-safeguard"));
+    } else {
+      // handover mode — also sets safeguard runtime as fallback
+      setCompactionSafeguardRuntime(params.sessionManager, {
+        maxHistoryShare: compactionCfg?.maxHistoryShare,
+        contextWindowTokens: contextWindowInfo.tokens,
+      });
+      setHandoverRuntime(params.sessionManager, {
+        contextWindowTokens: contextWindowInfo.tokens,
+        maxHistoryShare: compactionCfg?.maxHistoryShare,
+        handoverConfig: compactionCfg?.handover,
+        workspace: params.cfg?.agents?.defaults?.workspace,
+      });
+      paths.push(resolvePiExtensionPath("iris-handover"));
+    }
   }
   const pruning = buildContextPruningExtension(params);
   if (pruning.additionalExtensionPaths) {
