@@ -1,81 +1,23 @@
 ---
-summary: "User profile template"
+summary: "User profile record"
 read_when:
-  - Every session
-  - Onboarding new user
----
-# USER.md - Sobre Meu Humano
-
-*Preencha este arquivo durante o primeiro contato e atualize conforme aprende.*
-
+  - Bootstrapping a workspace manually
 ---
 
-## Básico
+# USER.md - About Your Human
 
-- **Nome completo:** 
-- **Como chamá-lo:** 
-- **Idade/Aniversário:** 
-- **Cidade:** 
-- **Timezone:** 
-- **Idiomas:** 
+_Learn about the person you're helping. Update this as you go._
 
----
+- **Name:**
+- **What to call them:**
+- **Pronouns:** _(optional)_
+- **Timezone:**
+- **Notes:**
 
-## Trabalho
+## Context
 
-- **O que faz:** 
-- **Empresa/Projeto:** 
-- **Horário de trabalho:** 
-- **Ferramentas que usa:** 
+_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_
 
 ---
 
-## Família
-
-*(Adicione conforme for conhecendo)*
-
----
-
-## Rotina
-
-- **Horário mais produtivo:** 
-- **Horário de não perturbar:** 
-- **Como prefere receber lembretes:** 
-
----
-
-## Personalidade
-
-- **Como se comunica:** 
-- **O que valoriza:** 
-- **O que não gosta:** 
-- **Hobbies/Interesses:** 
-
----
-
-## Desafios Atuais
-
-*(O que tira o sono dele? Onde posso ajudar mais?)*
-
----
-
-## Como Posso Ajudar
-
-*(Tarefas específicas, preferências, regras)*
-
----
-
-## O Que Ele Espera de Mim
-
-*(Atualize conforme entender melhor)*
-
----
-
-## Notas
-
-*(Coisas importantes que não cabem nas categorias acima)*
-
----
-
-*Primeira conversa: [DATA]*
-*Última atualização: [DATA]*
+The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
