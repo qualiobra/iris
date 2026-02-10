@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openclaw gateway:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(node dist/cli.js gateway start:*)",
+      "Bash(node:*)",
+      "Bash(schtasks /query:*)",
+      "Bash(MSYS_NO_PATHCONV=1 schtasks.exe:*)",
+      "Bash(where:*)",
+      "Bash(npm list:*)",
+      "Bash(npm run ui:build:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(python3:*)",
+      "Bash(git -C c:/Users/lucas/iris remote:*)",
+      "Bash(git -C c:/Users/lucas/iris status)",
+      "Bash(git -C c:/Users/lucas/iris diff)",
+      "Bash(git -C c:/Users/lucas/iris log --oneline -5)",
+      "Bash(git -C c:/Users/lucas/iris add assets/chrome-extension/icons/icon128.png assets/chrome-extension/icons/icon16.png assets/chrome-extension/icons/icon32.png assets/chrome-extension/icons/icon48.png package-lock.json src/agents/system-prompt.ts src/auto-reply/commands-registry.data.ts src/canvas-host/a2ui/index.html src/canvas-host/server.ts src/commands/dashboard.ts src/gateway/assistant-identity.ts src/wizard/onboarding.finalize.ts ui/index.html ui/public/apple-touch-icon.png ui/public/favicon-32.png ui/public/favicon.ico ui/public/favicon.svg ui/src/styles/base.css ui/src/styles/chat/grouped.css ui/src/styles/chat/layout.css ui/src/styles/config.css ui/src/ui/app-render.ts)",
+      "Bash(git commit:*)",
+      "Bash(git -C c:/Users/lucas/iris push origin main)",
+      "Bash(git checkout:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm test:*)"
+    ]
+  }
+}
