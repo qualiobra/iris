@@ -6,6 +6,7 @@ import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { loadSessionStore, resolveStorePath } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { isDiagnosticsEnabled } from "../../infra/diagnostic-events.js";
+import { enqueueSystemEvent } from "../../infra/system-events.js";
 import {
   logMessageProcessed,
   logMessageQueued,
@@ -14,6 +15,7 @@ import {
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { maybeApplyTtsToPayload, normalizeTtsAutoMode, resolveTtsConfig } from "../../tts/tts.js";
 import { getReplyFromConfig } from "../reply.js";
+import { SILENT_MARKERS } from "../tokens.js";
 import { formatAbortReplyText, tryFastAbortFromMessage } from "./abort.js";
 import { shouldSkipDuplicateInbound } from "./inbound-dedupe.js";
 import { isRoutableChannel, routeReply } from "./route-reply.js";
@@ -302,7 +304,7 @@ export async function dispatchReplyFromConfig(params: {
           ? (payload: ReplyPayload) => {
               const run = async () => {
                 // In tool-only mode, suppress automatic tool result delivery.
-                if ((cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only") {
+                if ((cfg.agents?.defaults?.replyMode ?? "tool-only") === "tool-only") {
                   return;
                 }
                 const ttsPayload = await maybeApplyTtsToPayload({
@@ -326,7 +328,7 @@ export async function dispatchReplyFromConfig(params: {
           const run = async () => {
             // In tool-only mode, suppress all automatic block replies.
             // Only messages sent explicitly via the message tool should reach the channel.
-            if ((cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only") {
+            if ((cfg.agents?.defaults?.replyMode ?? "tool-only") === "tool-only") {
               return;
             }
             // Accumulate block text for TTS generation after streaming
@@ -360,7 +362,7 @@ export async function dispatchReplyFromConfig(params: {
     const replies = replyResult ? (Array.isArray(replyResult) ? replyResult : [replyResult]) : [];
 
     // In tool-only mode, suppress all automatic final replies.
-    const isToolOnlyMode = (cfg.agents?.defaults?.replyMode ?? "auto") === "tool-only";
+    const isToolOnlyMode = (cfg.agents?.defaults?.replyMode ?? "tool-only") === "tool-only";
 
     let queuedFinal = false;
     let routedFinalCount = 0;
@@ -395,6 +397,27 @@ export async function dispatchReplyFromConfig(params: {
         }
       } else {
         queuedFinal = dispatcher.sendFinalReply(ttsReply) || queuedFinal;
+      }
+    }
+
+    // ── Tool-only discard alert: system event safety net ──
+    // NOTE: This may fire even if Layer A (re-prompt) already corrected the issue.
+    // This is intentional — it's a safety net. The agent can safely ignore it if already corrected.
+    if (isToolOnlyMode && replies.length > 0 && ctx.SessionKey) {
+      const discardedTexts = replies
+        .map((r) => r.text?.trim())
+        .filter((t): t is string => Boolean(t))
+        .filter((t) => !SILENT_MARKERS.has(t))
+        .join("\n");
+      if (discardedTexts) {
+        const preview = discardedTexts.slice(0, 150);
+        enqueueSystemEvent(
+          `\u26a0\ufe0f Your plain text was discarded (replyMode "tool-only" active). ` +
+            `If this was a REPLY intended for the user/customer, resend it using the message tool. ` +
+            `If this was internal reasoning/thinking, ignore this alert — discarding was correct. ` +
+            `Discarded text preview: "${preview}"`,
+          { sessionKey: ctx.SessionKey },
+        );
       }
     }
 

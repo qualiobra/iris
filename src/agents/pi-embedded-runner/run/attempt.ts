@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import type { EmbeddedRunAttemptParams, EmbeddedRunAttemptResult } from "./types.js";
 import { resolveHeartbeatPrompt } from "../../../auto-reply/heartbeat.js";
+import { SILENT_MARKERS } from "../../../auto-reply/tokens.js";
 import { resolveChannelCapabilities } from "../../../config/channel-capabilities.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
@@ -838,6 +839,33 @@ export async function runEmbeddedAttempt(
             }
           } else {
             throw err;
+          }
+        }
+
+        // ── Tool-only discard alert: immediate re-prompt (max 1 retry) ──
+        if (!promptError && !aborted) {
+          const replyMode = params.config?.agents?.defaults?.replyMode ?? "tool-only";
+          const nonMarkerTexts = assistantTexts.filter((t) => !SILENT_MARKERS.has(t.trim()));
+          if (
+            replyMode === "tool-only" &&
+            nonMarkerTexts.length > 0 &&
+            !didSendViaMessagingTool()
+          ) {
+            const preview = nonMarkerTexts.join("\n").slice(0, 150);
+            const alert =
+              `\u26a0\ufe0f Your plain text was discarded because replyMode is "tool-only". ` +
+              `If this was a REPLY intended for the user/customer, resend it using the message tool. ` +
+              `If this was internal reasoning/thinking, ignore this alert — discarding was correct.\n\n` +
+              `Discarded text preview: "${preview}"`;
+            log.debug(
+              `tool-only discard alert: re-prompting agent. runId=${params.runId} sessionId=${params.sessionId} preview=${preview.slice(0, 50)}...`,
+            );
+            try {
+              await abortable(activeSession.prompt(alert));
+              await waitForCompactionRetry();
+            } catch {
+              // Best effort — Layer B (system event) will handle next turn
+            }
           }
         }
 
