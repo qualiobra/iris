@@ -21,11 +21,52 @@ export type AssistantIdentity = {
   emoji?: string;
 };
 
+/**
+ * Detects and repairs double-encoded UTF-8 strings.
+ *
+ * Double-encoding happens when UTF-8 bytes are misinterpreted as Latin-1 and
+ * then re-encoded to UTF-8.  For example "Í" (U+00CD, UTF-8 C3 8D) becomes
+ * "Ã\x8D" (U+00C3 U+008D) which displays as "Ã?ris" instead of "Íris".
+ *
+ * The heuristic: if every code-point fits in a single byte (U+0000-U+00FF) and
+ * those bytes form a valid UTF-8 sequence that differs from the original, the
+ * string was almost certainly double-encoded.
+ */
+function repairDoubleEncodedUtf8(value: string): string {
+  let hasHighLatin1 = false;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code > 0xff) {
+      return value;
+    } // beyond Latin-1 → not double-encoded
+    if (code >= 0x80) {
+      hasHighLatin1 = true;
+    }
+  }
+  if (!hasHighLatin1) {
+    return value;
+  }
+
+  try {
+    const bytes = new Uint8Array(value.length);
+    for (let i = 0; i < value.length; i++) {
+      bytes[i] = value.charCodeAt(i);
+    }
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (decoded !== value) {
+      return decoded;
+    }
+  } catch {
+    // Bytes don't form valid UTF-8 → not double-encoded, keep original.
+  }
+  return value;
+}
+
 function coerceIdentityValue(value: string | undefined, maxLength: number): string | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
-  const trimmed = value.trim();
+  const trimmed = repairDoubleEncodedUtf8(value.trim());
   if (!trimmed) {
     return undefined;
   }
