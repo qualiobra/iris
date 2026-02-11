@@ -29,6 +29,7 @@ export const DEFAULT_HEARTBEAT_FILENAME = "HEARTBEAT.md";
 export const DEFAULT_BOOTSTRAP_FILENAME = "BOOTSTRAP.md";
 export const DEFAULT_MEMORY_FILENAME = "MEMORY.md";
 export const DEFAULT_MEMORY_ALT_FILENAME = "memory.md";
+export const DEFAULT_HANDOVER_FILENAME = "memory/handover.md";
 
 function stripFrontMatter(content: string): string {
   if (!content.startsWith("---")) {
@@ -164,7 +165,9 @@ export type WorkspaceBootstrapFileName =
   | typeof DEFAULT_HEARTBEAT_FILENAME
   | typeof DEFAULT_BOOTSTRAP_FILENAME
   | typeof DEFAULT_MEMORY_FILENAME
-  | typeof DEFAULT_MEMORY_ALT_FILENAME;
+  | typeof DEFAULT_MEMORY_ALT_FILENAME
+  | typeof DEFAULT_HANDOVER_FILENAME
+  | (string & {}); // allow dynamic names (daily log)
 
 export type WorkspaceBootstrapFile = {
   name: WorkspaceBootstrapFileName;
@@ -399,24 +402,37 @@ export async function loadWorkspaceBootstrapFiles(dir: string): Promise<Workspac
       filePath: path.join(resolvedDir, DEFAULT_TOOLS_FILENAME),
     },
     {
-      name: DEFAULT_IDENTITY_FILENAME,
-      filePath: path.join(resolvedDir, DEFAULT_IDENTITY_FILENAME),
-    },
-    {
       name: DEFAULT_USER_FILENAME,
       filePath: path.join(resolvedDir, DEFAULT_USER_FILENAME),
-    },
-    {
-      name: DEFAULT_HEARTBEAT_FILENAME,
-      filePath: path.join(resolvedDir, DEFAULT_HEARTBEAT_FILENAME),
-    },
-    {
-      name: DEFAULT_BOOTSTRAP_FILENAME,
-      filePath: path.join(resolvedDir, DEFAULT_BOOTSTRAP_FILENAME),
     },
   ];
 
   entries.push(...(await resolveMemoryBootstrapEntries(resolvedDir)));
+
+  // Inject memory/handover.md if it exists (session context from previous handover)
+  const handoverPath = path.join(resolvedDir, "memory", "handover.md");
+  try {
+    await fs.access(handoverPath);
+    entries.push({
+      name: DEFAULT_HANDOVER_FILENAME as WorkspaceBootstrapFileName,
+      filePath: handoverPath,
+    });
+  } catch {
+    // optional – handover.md may not exist yet
+  }
+
+  // Inject today's daily log if it exists (memory/YYYY-MM-DD.md)
+  const today = new Date().toISOString().slice(0, 10);
+  const dailyLogPath = path.join(resolvedDir, "memory", `${today}.md`);
+  try {
+    await fs.access(dailyLogPath);
+    entries.push({
+      name: `memory/${today}.md` as WorkspaceBootstrapFileName,
+      filePath: dailyLogPath,
+    });
+  } catch {
+    // optional – daily log may not exist
+  }
 
   const result: WorkspaceBootstrapFile[] = [];
   for (const entry of entries) {

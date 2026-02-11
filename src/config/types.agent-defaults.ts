@@ -282,6 +282,8 @@ export type AgentCompactionConfig = {
   memoryFlush?: AgentCompactionMemoryFlushConfig;
   /** Handover configuration (used when mode is "handover"). */
   handover?: AgentHandoverConfig;
+  /** Trigger proactive handover when remaining tokens <= this value (default: disabled). */
+  proactiveThresholdTokens?: number;
 };
 
 export type AgentCompactionMemoryFlushConfig = {
