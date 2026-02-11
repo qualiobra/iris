@@ -1,5 +1,6 @@
 import {
   createAgentSession,
+  DefaultResourceLoader,
   estimateTokens,
   SessionManager,
   SettingsManager,
@@ -54,7 +55,7 @@ import {
   type SkillSnapshot,
 } from "../skills.js";
 import { resolveTranscriptPolicy } from "../transcript-policy.js";
-import { buildEmbeddedExtensionPaths } from "./extensions.js";
+import { buildEmbeddedExtensions } from "./extensions.js";
 import {
   logToolSchemasForGoogle,
   sanitizeSessionHistory,
@@ -385,14 +386,21 @@ export async function compactEmbeddedPiSessionDirect(
         settingsManager,
         minReserveTokens: resolveCompactionReserveTokensFloor(params.config),
       });
-      // Call for side effects (sets compaction/pruning runtime state)
-      buildEmbeddedExtensionPaths({
+      const { extensionFactories } = buildEmbeddedExtensions({
         cfg: params.config,
         sessionManager,
         provider,
         modelId,
         model,
       });
+
+      const resourceLoader = new DefaultResourceLoader({
+        cwd: resolvedWorkspace,
+        agentDir,
+        settingsManager,
+        extensionFactories,
+      });
+      await resourceLoader.reload();
 
       const { builtInTools, customTools } = splitSdkTools({
         tools,
@@ -410,6 +418,7 @@ export async function compactEmbeddedPiSessionDirect(
         customTools,
         sessionManager,
         settingsManager,
+        resourceLoader,
       });
       applySystemPromptOverrideToSession(session, systemPromptOverride());
 

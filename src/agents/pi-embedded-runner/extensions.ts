@@ -1,25 +1,20 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
 import type { SessionManager } from "@mariozechner/pi-coding-agent";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { OpenClawConfig } from "../../config/config.js";
 import { resolveContextWindowInfo } from "../context-window-guard.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../defaults.js";
 import { setCompactionSafeguardRuntime } from "../pi-extensions/compaction-safeguard-runtime.js";
+import compactionSafeguardExtension from "../pi-extensions/compaction-safeguard.js";
+import contextPruningExtension from "../pi-extensions/context-pruning.js";
 import { setContextPruningRuntime } from "../pi-extensions/context-pruning/runtime.js";
 import { computeEffectiveSettings } from "../pi-extensions/context-pruning/settings.js";
 import { makeToolPrunablePredicate } from "../pi-extensions/context-pruning/tools.js";
 import { setHandoverRuntime } from "../pi-extensions/iris-handover-runtime.js";
+import irisHandoverExtension from "../pi-extensions/iris-handover.js";
 import { ensurePiCompactionReserveTokens } from "../pi-settings.js";
 import { isCacheTtlEligibleProvider, readLastCacheTtlTimestamp } from "./cache-ttl.js";
 
-function resolvePiExtensionPath(id: string): string {
-  const self = fileURLToPath(import.meta.url);
-  const dir = path.dirname(self);
-  // In dev this file is `.ts` (tsx), in production it's `.js`.
-  const ext = path.extname(self) === ".ts" ? "ts" : "js";
-  return path.join(dir, "..", "pi-extensions", `${id}.${ext}`);
-}
+type ExtensionFactory = (api: any) => void;
 
 function resolveContextWindowTokens(params: {
   cfg: OpenClawConfig | undefined;
@@ -36,13 +31,13 @@ function resolveContextWindowTokens(params: {
   }).tokens;
 }
 
-function buildContextPruningExtension(params: {
+function buildContextPruningFactory(params: {
   cfg: OpenClawConfig | undefined;
   sessionManager: SessionManager;
   provider: string;
   modelId: string;
   model: Model<Api> | undefined;
-}): { additionalExtensionPaths?: string[] } {
+}): { factory?: ExtensionFactory } {
   const raw = params.cfg?.agents?.defaults?.contextPruning;
   if (raw?.mode !== "cache-ttl") {
     return {};
@@ -63,9 +58,7 @@ function buildContextPruningExtension(params: {
     lastCacheTouchAt: readLastCacheTtlTimestamp(params.sessionManager),
   });
 
-  return {
-    additionalExtensionPaths: [resolvePiExtensionPath("context-pruning")],
-  };
+  return { factory: contextPruningExtension };
 }
 
 function resolveCompactionMode(cfg?: OpenClawConfig): "default" | "safeguard" | "handover" {
@@ -76,14 +69,14 @@ function resolveCompactionMode(cfg?: OpenClawConfig): "default" | "safeguard" | 
   return "default";
 }
 
-export function buildEmbeddedExtensionPaths(params: {
+export function buildEmbeddedExtensions(params: {
   cfg: OpenClawConfig | undefined;
   sessionManager: SessionManager;
   provider: string;
   modelId: string;
   model: Model<Api> | undefined;
-}): string[] {
-  const paths: string[] = [];
+}): { extensionFactories: ExtensionFactory[] } {
+  const factories: ExtensionFactory[] = [];
   const compactionMode = resolveCompactionMode(params.cfg);
   if (compactionMode === "safeguard" || compactionMode === "handover") {
     const compactionCfg = params.cfg?.agents?.defaults?.compaction;
@@ -100,7 +93,7 @@ export function buildEmbeddedExtensionPaths(params: {
         maxHistoryShare: compactionCfg?.maxHistoryShare,
         contextWindowTokens: contextWindowInfo.tokens,
       });
-      paths.push(resolvePiExtensionPath("compaction-safeguard"));
+      factories.push(compactionSafeguardExtension);
     } else {
       // handover mode — also sets safeguard runtime as fallback
       setCompactionSafeguardRuntime(params.sessionManager, {
@@ -113,14 +106,14 @@ export function buildEmbeddedExtensionPaths(params: {
         handoverConfig: compactionCfg?.handover,
         workspace: params.cfg?.agents?.defaults?.workspace,
       });
-      paths.push(resolvePiExtensionPath("iris-handover"));
+      factories.push(irisHandoverExtension);
     }
   }
-  const pruning = buildContextPruningExtension(params);
-  if (pruning.additionalExtensionPaths) {
-    paths.push(...pruning.additionalExtensionPaths);
+  const pruning = buildContextPruningFactory(params);
+  if (pruning.factory) {
+    factories.push(pruning.factory);
   }
-  return paths;
+  return { extensionFactories: factories };
 }
 
 export { ensurePiCompactionReserveTokens };
