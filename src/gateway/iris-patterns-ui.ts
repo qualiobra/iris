@@ -62,7 +62,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     </div>
   </div>
   <table>
-    <thead><tr><th>On</th><th>Label</th><th>Regex</th><th>Template</th><th></th></tr></thead>
+    <thead><tr><th>On</th><th>Label</th><th>Regex</th><th>Dir</th><th>Template</th><th></th></tr></thead>
     <tbody id="patternTable"></tbody>
   </table>
   <div id="emptyState" class="empty-state" style="display:none;">No patterns configured</div>
@@ -74,6 +74,7 @@ const HTML_PAGE = `<!DOCTYPE html>
     <div><label>ID</label><input id="fId" placeholder="e.g. phone"></div>
     <div><label>Label</label><input id="fLabel" placeholder="e.g. Telefone"></div>
     <div style="max-width:80px;"><label>Flags</label><input id="fFlags" value="g"></div>
+    <div style="max-width:120px;"><label>Direction</label><select id="fDirection"><option value="inbound">Inbound</option><option value="outbound">Outbound</option><option value="both">Both</option></select></div>
   </div>
   <div class="form-row">
     <div><label>Regex</label><input id="fRegex" placeholder="Regular expression"></div>
@@ -123,6 +124,7 @@ function render() {
     <td><label class="toggle"><input type="checkbox" \${p.enabled ? "checked" : ""} onchange="togglePattern(\${i})"><span class="slider"></span></label></td>
     <td>\${esc(p.label)}</td>
     <td style="font-family:monospace;font-size:0.8rem;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="\${esc(p.regex)}">\${esc(p.regex)}</td>
+    <td style="font-size:0.85rem;">\${esc(p.direction || "inbound")}</td>
     <td style="font-size:0.85rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="\${esc(p.template)}">\${esc(p.template)}</td>
     <td style="white-space:nowrap;"><button class="btn btn-sm" onclick="editPattern(\${i})">Edit</button> <button class="btn btn-sm btn-danger" onclick="deletePattern(\${i})">Del</button></td>
   </tr>\`).join("");
@@ -139,6 +141,7 @@ function showAddForm() {
   document.getElementById("fLabel").value = "";
   document.getElementById("fRegex").value = "";
   document.getElementById("fFlags").value = "g";
+  document.getElementById("fDirection").value = "inbound";
   document.getElementById("fTemplate").value = "";
   document.getElementById("addForm").style.display = "block";
 }
@@ -151,6 +154,7 @@ function editPattern(i) {
   document.getElementById("fLabel").value = p.label;
   document.getElementById("fRegex").value = p.regex;
   document.getElementById("fFlags").value = p.flags || "g";
+  document.getElementById("fDirection").value = p.direction || "inbound";
   document.getElementById("fTemplate").value = p.template;
   document.getElementById("addForm").style.display = "block";
 }
@@ -163,6 +167,7 @@ function savePattern() {
     label: document.getElementById("fLabel").value.trim(),
     regex: document.getElementById("fRegex").value,
     flags: document.getElementById("fFlags").value.trim() || "g",
+    direction: document.getElementById("fDirection").value,
     template: document.getElementById("fTemplate").value,
     enabled: true,
   };

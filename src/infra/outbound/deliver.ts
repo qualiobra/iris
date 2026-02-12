@@ -322,6 +322,32 @@ export async function deliverOutboundPayloads(params: {
     };
   };
   const normalizedPayloads = normalizeReplyPayloadsForDelivery(payloads);
+  // Fire message_sending hook (can modify/cancel outgoing message)
+  const sendingHookRunner = getGlobalHookRunner();
+  if (sendingHookRunner?.hasHooks("message_sending")) {
+    const fullText = normalizedPayloads
+      .map((p) => p.text ?? "")
+      .filter(Boolean)
+      .join("\n");
+    if (fullText) {
+      const sendingResult = await sendingHookRunner.runMessageSending(
+        { to, content: fullText, metadata: { channel, accountId } },
+        { channelId: channel, accountId, conversationId: to },
+      );
+      if (sendingResult?.cancel) {
+        return [];
+      }
+      if (sendingResult?.content && sendingResult.content !== fullText) {
+        const idx = normalizedPayloads.findIndex((p) => p.text);
+        if (idx >= 0) {
+          normalizedPayloads[idx] = {
+            ...normalizedPayloads[idx],
+            text: sendingResult.content,
+          };
+        }
+      }
+    }
+  }
   for (const payload of normalizedPayloads) {
     const payloadSummary: NormalizedOutboundPayload = {
       text: payload.text ?? "",
@@ -404,6 +430,50 @@ export async function deliverOutboundPayloads(params: {
         sessionKey: params.mirror.sessionKey,
         text: mirrorText,
       });
+    }
+  }
+  // Outbound pattern detection — inject alert into agent session
+  if (params.mirror?.sessionKey && results.length > 0) {
+    try {
+      const { runPatternMatching, DEFAULT_PATTERNS } =
+        await import("../../hooks/bundled/pattern-detector/handler.js");
+      const { resolveHookConfig } = await import("../../hooks/config.js");
+
+      const hookConfig = resolveHookConfig(cfg, "pattern-detector");
+      if (hookConfig?.enabled !== false) {
+        const patterns = Array.isArray(hookConfig?.patterns)
+          ? hookConfig.patterns
+          : DEFAULT_PATTERNS;
+
+        const fullText = normalizedPayloads
+          .map((p) => p.text ?? "")
+          .filter(Boolean)
+          .join("\n");
+
+        const alerts = runPatternMatching(fullText, patterns, "outbound");
+        if (alerts.length > 0) {
+          const { createSubsystemLogger } = await import("../../logging/subsystem.js");
+          const pdLog = createSubsystemLogger("hooks/pattern-detector");
+          pdLog.info(`[outbound] ${alerts.length} matches: ${alerts.join(" | ")}`);
+
+          // Write to pending alerts file — picked up by before_agent_start on next turn
+          const fs = await import("node:fs");
+          const path = await import("node:path");
+          const { resolveSessionTranscriptsDirForAgent } =
+            await import("../../config/sessions/paths.js");
+          const alertsDir = resolveSessionTranscriptsDirForAgent(params.mirror.agentId);
+          const alertsFile = path.join(alertsDir, "pending-outbound-alerts.jsonl");
+          const entry = JSON.stringify({
+            ts: Date.now(),
+            sessionKey: params.mirror.sessionKey,
+            alerts,
+          });
+          fs.appendFileSync(alertsFile, entry + "\n");
+          pdLog.info(`[outbound] queued ${alerts.length} alerts to ${alertsFile}`);
+        }
+      }
+    } catch {
+      // Silent — pattern detection failure must not break delivery
     }
   }
   return results;
