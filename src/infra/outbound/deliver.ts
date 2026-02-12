@@ -386,7 +386,13 @@ export async function deliverOutboundPayloads(params: {
       if (errHookRunner?.hasHooks("message_sent")) {
         void errHookRunner
           .runMessageSent(
-            { to, content: payloadSummary.text, success: false, error: String(err) },
+            {
+              to,
+              content: payloadSummary.text,
+              success: false,
+              error: String(err),
+              metadata: { channel, accountId },
+            },
             { channelId: channel, accountId, conversationId: to },
           )
           .catch(() => {});
@@ -404,12 +410,20 @@ export async function deliverOutboundPayloads(params: {
       .map((p) => p.text ?? "")
       .filter(Boolean)
       .join("\n");
+    const allMediaUrls = normalizedPayloads
+      .flatMap((p) => p.mediaUrls ?? (p.mediaUrl ? [p.mediaUrl] : []))
+      .filter(Boolean);
     void hookRunner
       .runMessageSent(
         {
           to,
           content: fullText,
           success: true,
+          metadata: {
+            channel,
+            accountId,
+            mediaUrls: allMediaUrls.length > 0 ? allMediaUrls : undefined,
+          },
         },
         {
           channelId: channel,

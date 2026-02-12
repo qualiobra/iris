@@ -9,6 +9,7 @@ import { handlePatternsUi } from "../gateway/iris-patterns-ui.js";
 import {
   messageLoggerReceivedHandler,
   messageLoggerSentHandler,
+  messageLoggerTranscribedHandler,
 } from "../hooks/bundled/message-logger/handler.js";
 import { patternDetectorHandler } from "../hooks/bundled/pattern-detector/handler.js";
 
@@ -36,6 +37,15 @@ export function registerIrisBuiltinHooks(registry: PluginRegistry): void {
     pluginId: "iris:message-logger",
     hookName: "message_sent",
     handler: messageLoggerSentHandler,
+    priority: 0,
+    source: "iris-builtin",
+  } as PluginHookRegistration);
+
+  // Message Logger: message_transcribed
+  registry.typedHooks.push({
+    pluginId: "iris:message-logger",
+    hookName: "message_transcribed",
+    handler: messageLoggerTranscribedHandler,
     priority: 0,
     source: "iris-builtin",
   } as PluginHookRegistration);

@@ -186,6 +186,13 @@ export async function dispatchReplyFromConfig(params: {
             senderName: ctx.SenderName,
             senderUsername: ctx.SenderUsername,
             senderE164: ctx.SenderE164,
+            mediaPaths: ctx.MediaPaths ?? (ctx.MediaPath ? [ctx.MediaPath] : undefined),
+            mediaUrls: ctx.MediaUrls ?? (ctx.MediaUrl ? [ctx.MediaUrl] : undefined),
+            mediaTypes: ctx.MediaTypes ?? (ctx.MediaType ? [ctx.MediaType] : undefined),
+            transcript: ctx.Transcript ?? undefined,
+            chatType: ctx.ChatType ?? undefined,
+            groupSubject: ctx.GroupSubject ?? undefined,
+            mediaRemoteHost: ctx.MediaRemoteHost ?? undefined,
           },
         },
         {

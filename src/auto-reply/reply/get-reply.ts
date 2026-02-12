@@ -12,6 +12,7 @@ import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../../agents/
 import { type OpenClawConfig, loadConfig } from "../../config/config.js";
 import { applyLinkUnderstanding } from "../../link-understanding/apply.js";
 import { applyMediaUnderstanding } from "../../media-understanding/apply.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { defaultRuntime } from "../../runtime.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
@@ -123,6 +124,40 @@ export async function getReplyFromConfig(
       agentDir,
       activeModel: { provider, model },
     });
+
+    // Fire message_transcribed hook after transcription completes
+    if (finalized.Transcript) {
+      const hookRunner = getGlobalHookRunner();
+      if (hookRunner?.hasHooks("message_transcribed")) {
+        void hookRunner
+          .runMessageTranscribed(
+            {
+              from: finalized.From ?? "",
+              transcript: finalized.Transcript,
+              timestamp: typeof finalized.Timestamp === "number" ? finalized.Timestamp : undefined,
+              metadata: {
+                chatType: finalized.ChatType,
+                groupSubject: finalized.GroupSubject,
+                senderName: finalized.SenderName,
+                senderE164: finalized.SenderE164,
+              },
+            },
+            {
+              channelId: (
+                finalized.OriginatingChannel ??
+                finalized.Surface ??
+                finalized.Provider ??
+                ""
+              ).toLowerCase(),
+              accountId: finalized.AccountId,
+              conversationId:
+                finalized.OriginatingTo ?? finalized.To ?? finalized.From ?? undefined,
+            },
+          )
+          .catch(() => {});
+      }
+    }
+
     await applyLinkUnderstanding({
       ctx: finalized,
       cfg,
