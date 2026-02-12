@@ -21,6 +21,7 @@ import {
   appendAssistantMessageToSessionTranscript,
   resolveMirroredTranscriptText,
 } from "../../config/sessions.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { markdownToSignalTextChunks, type SignalTextStyleRange } from "../../signal/format.js";
 import { sendMessageSignal } from "../../signal/send.js";
 import { throwIfAborted } from "./abort.js";
@@ -355,11 +356,42 @@ export async function deliverOutboundPayloads(params: {
         }
       }
     } catch (err) {
+      const errHookRunner = getGlobalHookRunner();
+      if (errHookRunner?.hasHooks("message_sent")) {
+        void errHookRunner
+          .runMessageSent(
+            { to, content: payloadSummary.text, success: false, error: String(err) },
+            { channelId: channel, accountId, conversationId: to },
+          )
+          .catch(() => {});
+      }
       if (!params.bestEffort) {
         throw err;
       }
       params.onError?.(err, payloadSummary);
     }
+  }
+  // Fire message_sent hook for logging
+  const hookRunner = getGlobalHookRunner();
+  if (hookRunner?.hasHooks("message_sent")) {
+    const fullText = normalizedPayloads
+      .map((p) => p.text ?? "")
+      .filter(Boolean)
+      .join("\n");
+    void hookRunner
+      .runMessageSent(
+        {
+          to,
+          content: fullText,
+          success: true,
+        },
+        {
+          channelId: channel,
+          accountId,
+          conversationId: to,
+        },
+      )
+      .catch(() => {});
   }
   if (params.mirror && results.length > 0) {
     const mirrorText = resolveMirroredTranscriptText({
